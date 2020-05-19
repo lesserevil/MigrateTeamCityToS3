@@ -12,8 +12,12 @@ def run() -> None:
     local_artifact_root = args.local_artifact_root
     backup_directory = args.backup_directory
     dry_mode = args.dry
+    project_root = args.project_root
+    teamcity_user = args.teamcity_user
+    teamcity_pass = args.teamcity_pass
+    teamcity_url = args.teamcity_url
 
-    for build_result_dir in common.build_results_iter(local_artifact_root):
+    for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url, teamcity_user, teamcity_pass):
         print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
 
         artifact_list = common.get_artifact_list(build_result_dir)
@@ -45,6 +49,10 @@ def parse_args() -> argparse.Namespace:
 
     common.add_local_artifact_root_argument(parser)
     common.add_dry_mode_argument(parser)
+    common.add_project_root_argument(parser)
+    common.add_teamcity_user_argument(parser)
+    common.add_teamcity_pass_argument(parser)
+    common.add_teamcity_url_argument(parser)
 
     return parser.parse_args()
 
