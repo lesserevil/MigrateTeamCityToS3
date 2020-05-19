@@ -10,16 +10,13 @@ import os
 import subprocess
 from datetime import datetime
 from typing import List
+import jprops
 
 import common
 
 
 class BadPropertiesFiles(BaseException):
     pass
-
-
-case_sensitive_parser = configparser.RawConfigParser(delimiters=["="])
-case_sensitive_parser.optionxform = lambda option: option
 
 
 def run() -> None:
@@ -31,9 +28,12 @@ def run() -> None:
     teamcity_feature = args.teamcity_feature
     skip_old = args.skip_old
     teamcity_url = args.teamcity_url
+    teamcity_user = args.teamcity_user
+    teamcity_pass = args.teamcity_pass
     project_root = args.project_root
+    aws_profile = args.aws_profile
 
-    for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url):
+    for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url, teamcity_user, teamcity_pass):
         print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
 
         artifacts_json_present = os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
@@ -50,7 +50,7 @@ def run() -> None:
                   "caused by a canceled build")
             continue
         remote_uri = aws_bucket_uri + '/' + remote_dir
-        aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
+        aws_command = ['aws', '--profile', aws_profile, 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
         artifact_list = common.get_artifact_list(build_result_dir)
 
@@ -83,8 +83,7 @@ def get_remote_path(build_result_dir: str) -> str:
         raise BadPropertiesFiles("No sane looking properties file found in {}".format(build_result_dir))
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
-        case_sensitive_parser.read_file(f=itertools.chain(['[global]'], fh))
-        all_parameters = case_sensitive_parser['global']
+        all_parameters = jprops.load_properties(fh)
 
         build_number = all_parameters['teamcity.build.id']
         build_id = all_parameters['system.teamcity.buildType.id']
@@ -99,11 +98,14 @@ def parse_args() -> argparse.Namespace:
 
     common.add_local_artifact_root_argument(parser)
     common.add_aws_bucket_uri_argument(parser)
+    common.add_aws_profile_argument(parser)
     common.add_dry_mode_argument(parser)
     common.add_teamcity_feature_argument(parser)
     common.add_skip_old_argument(parser)
     common.add_project_root_argument(parser)
     common.add_teamcity_url_argument(parser)
+    common.add_teamcity_user_argument(parser)
+    common.add_teamcity_pass_argument(parser)
 
     return parser.parse_args()
 

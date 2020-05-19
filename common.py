@@ -11,6 +11,7 @@ DEFAULT_LOCAL_ARTIFACT_ROOT = None
 
 # Set a default AWS bucket URI so that you don't have to type it on the command-line all the time
 DEFAULT_AWS_BUCKET_URI = None
+DEFAULT_AWS_PROFILE = "Default"
 
 # Set a default local artifact backup root so that you don't have to type it on the command-line all the time
 DEFAULT_ARTIFACT_BACKUP_ROOT = None
@@ -20,6 +21,8 @@ DEFAULT_PROJECT_ROOT = "_Root"
 
 # Set a default URL for the teamcity server
 DEFAULT_TEAMCITY_URL = None
+DEFAULT_TEAMCITY_USER = None
+DEFAULT_TEAMCITY_PASS = None
 
 
 def add_local_artifact_root_argument(parser: argparse.ArgumentParser) -> None:
@@ -31,6 +34,10 @@ def add_local_artifact_root_argument(parser: argparse.ArgumentParser) -> None:
 def add_project_root_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-p', '--project-root', default=DEFAULT_PROJECT_ROOT, required=True,
                         help='Top level project to search for artifacts')
+
+
+def add_aws_profile_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-a', '--aws-profile', default=DEFAULT_AWS_PROFILE, required=False, help='AWS profile')
 
 
 def add_aws_bucket_uri_argument(parser: argparse.ArgumentParser) -> None:
@@ -50,6 +57,16 @@ def add_teamcity_feature_argument(parser: argparse.ArgumentParser) -> None:
                         help='The TeamCity feature identifier for the S3 artifact storage backend')
 
 
+def add_teamcity_user_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-U', '--teamcity_user', action='store', required=True,
+                        help='The TeamCity URL Username')
+
+
+def add_teamcity_pass_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-P', '--teamcity_pass', action='store', required=True,
+                        help='The TeamCity URL Password')
+
+
 def add_teamcity_url_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-T', '--teamcity_url', action='store', required=True,
                         help='The TeamCity URL')
@@ -61,22 +78,22 @@ def add_skip_old_argument(parser: argparse.ArgumentParser) -> None:
                              'synced')
 
 
-def get_project_ids(project_root: str, teamcity_url: str) -> List[str]:
-    result = List[str]
-    r = requests.get("{}/app/rest/projects/id:{}?fields=projects(project(id))".format(teamcity_url, project_root), 
-            headers={"Accept": "application/json"})
+def get_project_ids(project_root: str, teamcity_url: str, teamcity_user: str, teamcity_pass: str) -> List[str]:
+    result = []
+    r = requests.get("{}/app/rest/projects/id:{}?fields=projects(project(id))".format(teamcity_url, project_root),
+            headers={"Accept": "application/json"}, auth=(teamcity_user, teamcity_pass))
     j=r.json()
-    for project in j.projects:
-        i=project.id
+    for project in j['projects']['project']:
+        i=project['id']
         result.append(i)
-        result.extend(get_project_ids(i, teamcity_url))
+        result.extend(get_project_ids(i, teamcity_url, teamcity_user, teamcity_pass))
     return result
 
-def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url: str) -> Generator[str, None, None]:
-    project_ids=get_project_ids(project_root, teamcity_url)
-    for project_id in sorted(os.listdir(local_artifact_root)):
+def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url: str, teamcity_user: str, teamcity_pass: str) -> Generator[str, None, None]:
+    project_ids=get_project_ids(project_root, teamcity_url, teamcity_user, teamcity_pass)
+    for project_id in sorted(project_ids):
         local_project_dir=os.path.join(local_artifact_root, project_id)
-        if (not os.path.isDirectory(local_project_dir)):
+        if (not os.path.isdir(local_project_dir)):
             continue
 
         if project_id.startswith('_'):
@@ -87,6 +104,7 @@ def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url
 
             for build_result in sorted(os.listdir(local_build_config_dir), key=int):
                 build_result_dir = os.path.join(local_build_config_dir, build_result)
+                print(build_result_dir)
 
                 yield build_result_dir
 
@@ -102,7 +120,7 @@ def get_artifact_list(build_result_dir: str) -> List[str]:
                 "  Found something that is not a file, {}".format(full_path)
             artifact_list.append(full_path)
     return artifact_list
-            
+
 
 if '__main__' == __name__:
     print('You probably did not mean to invoke this file. Try again.', file=sys.stderr)
