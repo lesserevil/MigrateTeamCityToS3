@@ -102,6 +102,8 @@ def parse_args() -> argparse.Namespace:
     common.add_dry_mode_argument(parser)
     common.add_teamcity_feature_argument(parser)
     common.add_skip_old_argument(parser)
+    common.add_project_root_argument(parser)
+    common.add_teamcity_url_argument(parser)
 
     return parser.parse_args()
 
