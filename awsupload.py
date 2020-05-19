@@ -133,7 +133,7 @@ def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str
             "artifacts": artifact_objects
         }
         artifacts_json_file_path = os.path.join(build_result_dir, '.teamcity', 'artifacts.json')
-        print('  Writing .teamcity/artifacts.json')
+        print('  {}Writing {}'.format("Not " if dry_run else "", artifacts_json_file_path))
         json_string = json.dumps(the_json, indent=2)
         if dry_run:
             print(json_string)
