@@ -3,9 +3,10 @@ import sys
 
 import argparse
 import os
-# Set a default local artifact root so that you don't have to type it on the command-line all the time
 from typing import Generator, List
+import requests
 
+# Set a default local artifact root so that you don't have to type it on the command-line all the time
 DEFAULT_LOCAL_ARTIFACT_ROOT = None
 
 # Set a default AWS bucket URI so that you don't have to type it on the command-line all the time
@@ -14,11 +15,22 @@ DEFAULT_AWS_BUCKET_URI = None
 # Set a default local artifact backup root so that you don't have to type it on the command-line all the time
 DEFAULT_ARTIFACT_BACKUP_ROOT = None
 
+# Set a default project; default is to look in all projects
+DEFAULT_PROJECT_ROOT = "_Root"
+
+# Set a default URL for the teamcity server
+DEFAULT_TEAMCITY_URL = None
+
 
 def add_local_artifact_root_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-l', '--local-artifact-root', default=DEFAULT_LOCAL_ARTIFACT_ROOT, required=True,
                         help='Current local artifact root with TeamCity artifacts. For example, '
                              '`/home/teamcity/.BuildServer/system/artifacts`')
+
+
+def add_project_root_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-p', '--project-root', default=DEFAULT_PROJECT_ROOT, required=True,
+                        help='Top level project to search for artifacts')
 
 
 def add_aws_bucket_uri_argument(parser: argparse.ArgumentParser) -> None:
@@ -38,18 +50,38 @@ def add_teamcity_feature_argument(parser: argparse.ArgumentParser) -> None:
                         help='The TeamCity feature identifier for the S3 artifact storage backend')
 
 
+def add_teamcity_url_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-T', '--teamcity_url', action='store', required=True,
+                        help='The TeamCity URL')
+
+
 def add_skip_old_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-s', '--skip_old', action='store_true',
                         help='Skip builds if a artifacts.json is found. Used to skip builds that have already been '
                              'synced')
 
 
-def build_results_iter(local_artifact_root: str) -> Generator[str, None, None]:
-    for project in sorted(os.listdir(local_artifact_root)):
-        if project.startswith('_'):
+def get_project_ids(project_root: str, teamcity_url: str) -> List[str]:
+    result = List[str]
+    r = requests.get("{}/app/rest/projects/id:{}?fields=projects(project(id))".format(teamcity_url, project_root), 
+            headers={"Accept": "application/json"})
+    j=r.json()
+    for project in j.projects:
+        i=project.id
+        result.append(i)
+        result.extend(get_project_ids(i, teamcity_url))
+    return result
+
+def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url: str) -> Generator[str, None, None]:
+    project_ids=get_project_ids(project_root, teamcity_url)
+    for project_id in sorted(os.listdir(local_artifact_root)):
+        local_project_dir=os.path.join(local_artifact_root, project_id)
+        if (not os.path.isDirectory(local_project_dir):
             continue
 
-        local_project_dir = os.path.join(local_artifact_root, project)
+        if project_id.startswith('_'):
+            continue
+
         for build_config in sorted(os.listdir(local_project_dir)):
             local_build_config_dir = os.path.join(local_project_dir, build_config)
 

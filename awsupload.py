@@ -30,8 +30,10 @@ def run() -> None:
     dry_mode = args.dry
     teamcity_feature = args.teamcity_feature
     skip_old = args.skip_old
+    teamcity_url = args.teamcity_url
+    project_root = args.project_root
 
-    for build_result_dir in common.build_results_iter(local_artifact_root):
+    for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url):
         print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
 
         artifacts_json_present = os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
