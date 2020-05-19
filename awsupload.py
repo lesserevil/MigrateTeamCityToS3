@@ -34,9 +34,11 @@ def run() -> None:
     aws_profile = args.aws_profile
 
     for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url, teamcity_user, teamcity_pass):
-        print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
+        print("{}: Working in {}".format(
+            datetime.now().isoformat(' '), build_result_dir))
 
-        artifacts_json_present = os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
+        artifacts_json_present = os.path.isfile(os.path.join(
+            build_result_dir, '.teamcity', 'artifacts.json'))
 
         if skip_old and artifacts_json_present:
             print("  Found previous artifacts.json file, skipping sync")
@@ -50,7 +52,8 @@ def run() -> None:
                   "caused by a canceled build")
             continue
         remote_uri = aws_bucket_uri + '/' + remote_dir
-        aws_command = ['aws', '--profile', aws_profile, 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
+        aws_command = ['aws', '--profile', aws_profile, 's3', 'sync',
+                       '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
         artifact_list = common.get_artifact_list(build_result_dir)
 
@@ -64,23 +67,28 @@ def run() -> None:
             subprocess.run(aws_command)
 
         if artifacts_json_present:
-            print("  Found previous artifacts.json file, I will not overwrite it!".format(build_result_dir))
+            print("  Found previous artifacts.json file, I will not overwrite it!".format(
+                build_result_dir))
             continue
-        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, dry_mode)
+        write_json_file(artifact_list, build_result_dir,
+                        remote_dir, teamcity_feature, dry_mode)
 
 
 def get_remote_path(build_result_dir: str) -> str:
     # Sometimes one of the properties files is bad (empty or too short). In those cases try the other one before giving
     # up
-    start_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
-    finish_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.finish.properties.gz')
+    start_prop_file = os.path.join(
+        build_result_dir, '.teamcity/properties/build.start.properties.gz')
+    finish_prop_file = os.path.join(
+        build_result_dir, '.teamcity/properties/build.finish.properties.gz')
     minimum_file_size_bytes = 100  # Consider files that are smaller than this invalid
     if os.path.isfile(start_prop_file) and os.path.getsize(start_prop_file) > minimum_file_size_bytes:
         properties_file = start_prop_file
     elif os.path.isfile(finish_prop_file) and os.path.getsize(finish_prop_file) > minimum_file_size_bytes:
         properties_file = finish_prop_file
     else:
-        raise BadPropertiesFiles("No sane looking properties file found in {}".format(build_result_dir))
+        raise BadPropertiesFiles(
+            "No sane looking properties file found in {}".format(build_result_dir))
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
         all_parameters = jprops.load_properties(fh)
@@ -132,8 +140,10 @@ def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str
             },
             "artifacts": artifact_objects
         }
-        artifacts_json_file_path = os.path.join(build_result_dir, '.teamcity', 'artifacts.json')
-        print('  {}Writing {}'.format("Not " if dry_run else "", artifacts_json_file_path))
+        artifacts_json_file_path = os.path.join(
+            build_result_dir, '.teamcity', 'artifacts.json')
+        print('  {}Writing {}'.format(
+            "Not " if dry_run else "", artifacts_json_file_path))
         json_string = json.dumps(the_json, indent=2)
         if dry_run:
             print(json_string)

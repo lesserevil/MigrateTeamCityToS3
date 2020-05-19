@@ -18,10 +18,12 @@ def run() -> None:
     teamcity_url = args.teamcity_url
 
     for build_result_dir in common.build_results_iter(local_artifact_root, project_root, teamcity_url, teamcity_user, teamcity_pass):
-        print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
+        print("{}: Working in {}".format(
+            datetime.now().isoformat(' '), build_result_dir))
 
         artifact_list = common.get_artifact_list(build_result_dir)
-        json_exists = os.path.exists(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
+        json_exists = os.path.exists(os.path.join(
+            build_result_dir, '.teamcity', 'artifacts.json'))
         if artifact_list and json_exists:
             for artifact in artifact_list:
                 mv(local_artifact_root, backup_directory, artifact, dry_mode)
@@ -61,7 +63,7 @@ def mv(local_artifact_root: str, backup_directory: str, source: str, dry_mode: b
     relative_source = source[len(local_artifact_root):]
     target = backup_directory + relative_source
 
-    print('  {0} -> {1}'.format(source, target),flush=True)
+    print('  {0} -> {1}'.format(source, target), flush=True)
     if not dry_mode:
         os.makedirs(os.path.dirname(target), exist_ok=True)
         os.rename(source, target)

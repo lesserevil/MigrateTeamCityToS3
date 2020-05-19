@@ -37,7 +37,8 @@ def add_project_root_argument(parser: argparse.ArgumentParser) -> None:
 
 
 def add_aws_profile_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument('-a', '--aws-profile', default=DEFAULT_AWS_PROFILE, required=False, help='AWS profile')
+    parser.add_argument('-a', '--aws-profile',
+                        default=DEFAULT_AWS_PROFILE, required=False, help='AWS profile')
 
 
 def add_aws_bucket_uri_argument(parser: argparse.ArgumentParser) -> None:
@@ -81,18 +82,21 @@ def add_skip_old_argument(parser: argparse.ArgumentParser) -> None:
 def get_project_ids(project_root: str, teamcity_url: str, teamcity_user: str, teamcity_pass: str) -> List[str]:
     result = []
     r = requests.get("{}/app/rest/projects/id:{}?fields=projects(project(id))".format(teamcity_url, project_root),
-            headers={"Accept": "application/json"}, auth=(teamcity_user, teamcity_pass))
-    j=r.json()
+                     headers={"Accept": "application/json"}, auth=(teamcity_user, teamcity_pass))
+    j = r.json()
     for project in j['projects']['project']:
-        i=project['id']
+        i = project['id']
         result.append(i)
-        result.extend(get_project_ids(i, teamcity_url, teamcity_user, teamcity_pass))
+        result.extend(get_project_ids(
+            i, teamcity_url, teamcity_user, teamcity_pass))
     return result
 
+
 def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url: str, teamcity_user: str, teamcity_pass: str) -> Generator[str, None, None]:
-    project_ids=get_project_ids(project_root, teamcity_url, teamcity_user, teamcity_pass)
+    project_ids = get_project_ids(
+        project_root, teamcity_url, teamcity_user, teamcity_pass)
     for project_id in sorted(project_ids):
-        local_project_dir=os.path.join(local_artifact_root, project_id)
+        local_project_dir = os.path.join(local_artifact_root, project_id)
         if (not os.path.isdir(local_project_dir)):
             continue
 
@@ -100,10 +104,12 @@ def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url
             continue
 
         for build_config in sorted(os.listdir(local_project_dir)):
-            local_build_config_dir = os.path.join(local_project_dir, build_config)
+            local_build_config_dir = os.path.join(
+                local_project_dir, build_config)
 
             for build_result in sorted(os.listdir(local_build_config_dir), key=int):
-                build_result_dir = os.path.join(local_build_config_dir, build_result)
+                build_result_dir = os.path.join(
+                    local_build_config_dir, build_result)
                 print(build_result_dir)
 
                 yield build_result_dir
@@ -112,7 +118,8 @@ def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url
 def get_artifact_list(build_result_dir: str) -> List[str]:
     artifact_list = []
     for root, dirs, files in os.walk(build_result_dir):
-        if '/.teamcity/' in root or root.endswith('/.teamcity'):  # Skip Teamcity directory, it is not a artifact
+        # Skip Teamcity directory, it is not a artifact
+        if '/.teamcity/' in root or root.endswith('/.teamcity'):
             continue
         for file in files:
             full_path = os.path.join(root, file)
