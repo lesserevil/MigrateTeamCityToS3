@@ -76,7 +76,7 @@ def build_results_iter(local_artifact_root: str, project_root: str, teamcity_url
     project_ids=get_project_ids(project_root, teamcity_url)
     for project_id in sorted(os.listdir(local_artifact_root)):
         local_project_dir=os.path.join(local_artifact_root, project_id)
-        if (not os.path.isDirectory(local_project_dir):
+        if (not os.path.isDirectory(local_project_dir)):
             continue
 
         if project_id.startswith('_'):
