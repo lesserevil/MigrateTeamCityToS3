@@ -2,6 +2,7 @@
 import argparse
 import os
 from datetime import datetime
+import shutil
 
 import common
 
@@ -66,7 +67,7 @@ def mv(local_artifact_root: str, backup_directory: str, source: str, dry_mode: b
     print('  {0} -> {1}'.format(source, target), flush=True)
     if not dry_mode:
         os.makedirs(os.path.dirname(target), exist_ok=True)
-        os.rename(source, target)
+        shutil.move(source, target)
 
 
 if '__main__' == __name__:
